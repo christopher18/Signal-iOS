@@ -2963,6 +2963,26 @@ typedef enum : NSUInteger {
     }
 }
 
+- (void)sendContactShare:(OWSContact *)contactShare
+{
+    OWSAssertIsOnMainThread();
+    OWSAssert(contactShare);
+
+    DDLogVerbose(@"%@ Sending contact share.", self.logTag);
+
+    BOOL didAddToProfileWhitelist = [ThreadUtil addThreadToProfileWhitelistIfEmptyContactThread:self.thread];
+    TSOutgoingMessage *message = [ThreadUtil sendMessageWithContactShare:contactShare
+                                                                inThread:self.thread
+                                                           messageSender:self.messageSender
+                                                              completion:nil];
+
+    [self messageWasSent:message];
+
+    if (didAddToProfileWhitelist) {
+        [self ensureDynamicInteractions];
+    }
+}
+
 - (NSURL *)videoTempFolder
 {
     NSString *temporaryDirectory = NSTemporaryDirectory();
@@ -5048,9 +5068,19 @@ interactionControllerForAnimationController:(id<UIViewControllerAnimatedTransiti
 {
     DDLogInfo(@"%@ in %s", self.logTag, __PRETTY_FUNCTION__);
 
-    // TODO:
+    [self dismissViewControllerAnimated:YES
+                             completion:^{
+                                 [self sendContactShare:contactShare];
+                             }];
 }
 
+- (void)approveContactShare:(ApproveContactShareViewController *)approveContactShare
+      didCancelContactShare:(OWSContact *)contactShare
+{
+    DDLogInfo(@"%@ in %s", self.logTag, __PRETTY_FUNCTION__);
+
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
 
 @end
 
